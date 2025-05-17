@@ -17,7 +17,8 @@ def split_file(file_path, num_chunks):
     for i in range(num_chunks):
         end = start + chunk_size + (1 if i < remainder else 0)
         chunk_words = words[start:end]
-        with open(f"chunks/chunk{i+1}.txt", 'w', encoding='utf-8') as chunk_file:
+        chunk_path = os.path.join("chunks", f"chunk{i+1}.txt")
+        with open(chunk_path, 'w', encoding='utf-8') as chunk_file:
             chunk_file.write(" ".join(chunk_words))
         start = end
 
@@ -27,9 +28,10 @@ def main():
     socket = context.socket(zmq.ROUTER)
     socket.bind("tcp://*:6000")
 
-    num_workers = 5
-    split_file("C:\Users\gvalm\Desktop\file.txt", num_workers)
-
+    num_workers = 1
+    start_split_time = time.perf_counter()
+    split_file("file.txt", num_workers)
+    end_split_time = time.perf_counter()
     poller = zmq.Poller()
     poller.register(socket, zmq.POLLIN)
 
@@ -43,25 +45,25 @@ def main():
     start_time = time.perf_counter()
 
     while responses < num_workers:
-        events = dict(poller.poll())
+        events = dict(poller.poll(timeout=1000))
         if socket in events:
             msg = socket.recv_multipart()
-
             worker_id = msg[0]
 
-            # Worker se identificou e está pronto
+            # Worker está pronto e pede chunk
             if len(msg) == 2 and msg[1] == b"READY":
-                workers_ready.add(worker_id)
-                print(f"{worker_id.decode()} está pronto")
+                if worker_id not in workers_ready:
+                    workers_ready.add(worker_id)
+                    print(f"{worker_id.decode()} está pronto")
 
-                # Enviar chunk se ainda não enviou
-                if chunks_sent < num_workers:
-                    with open(f"chunks/chunk{chunks_sent + 1}.txt", 'r', encoding='utf-8') as f:
+                    # Enviar o chunk correspondente a este worker
+                    chunks_sent += 1
+                    chunk_path = os.path.join("chunks", f"chunk{chunks_sent}.txt")
+                    with open(chunk_path, 'r', encoding='utf-8') as f:
                         chunk_data = f.read()
                     socket.send_multipart([worker_id, chunk_data.encode()])
-                    chunks_sent += 1
 
-            # Worker enviou resultado
+            # Worker enviou resultado (contagem de palavras)
             elif len(msg) == 2:
                 response = int(msg[1].decode())
                 print(f"{worker_id.decode()} respondeu: {response} palavras")
@@ -70,7 +72,8 @@ def main():
 
     end_time = time.perf_counter()
     print(f"\nTotal de palavras no arquivo: {total_words}")
-    print(f"Tempo total: {end_time - start_time:.2f}s")
+    print(f"Tempo pra contar palavras: {end_split_time - start_split_time:.2f}s")
+    print(f"Tempo pra separar : {end_time - start_time:.2f}s")
 
 
 if __name__ == "__main__":
