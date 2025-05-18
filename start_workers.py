@@ -19,14 +19,12 @@ def start_workers(num_workers):
             ])
 
         processes.append(p)
-        time.sleep(1)
+        time.sleep(0.2)
 
     return processes
 
 if __name__ == "__main__":
-    NUM_WORKERS = 10 # Altere conforme necessário
+    NUM_WORKERS = 40 # Altere conforme necessário
     procs = start_workers(NUM_WORKERS)
 
     # Opcional: esperar todos terminarem (útil para teste)
-    for p in procs:
-        p.wait()

@@ -30,7 +30,7 @@ def main():
     socket = context.socket(zmq.ROUTER)
     socket.bind("tcp://*:6000") # listen to port 6000
 
-    num_workers = 4 # How many works the system will have
+    num_workers = 30 # How many works the system will have
     start_split_time = time.perf_counter() # To count how many time it spends to split
     split_file("file.txt", num_workers)
     end_split_time = time.perf_counter()
@@ -46,7 +46,6 @@ def main():
     responses = 0 
 
     start_time = time.perf_counter() # To calculate the time to count the words
-
     while responses < num_workers:  # Wait for all messages 
         events = dict(poller.poll(timeout=1000))  # Check for messages every 1 sec
         if socket in events:
@@ -76,8 +75,9 @@ def main():
 
     end_time = time.perf_counter()
     print(f"\nTotal de palavras no arquivo: {total_words}")
-    print(f"Tempo pra contar palavras: {end_split_time - start_split_time:.2f}s")
-    print(f"Tempo pra separar : {end_time - start_time:.2f}s")
+    print(f"Tempo pra separar as palavras : {end_split_time - start_split_time:.2f}s")
+    print(f"Tempo pra contar palavras em cada chunk: {end_time - start_time:.2f}s")
+   
 
 
 if __name__ == "__main__":
